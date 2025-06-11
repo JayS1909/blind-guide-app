@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Blind Navigation Dashboard</title>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <style>
+    #map { height: 400px; width: 100%; }
+  </style>
+</head>
+<body>
+  <h1>Blind Person Tracker (Free Map)</h1>
+
+  <div id="map"></div>
+
+  <h2>Send Voice Message</h2>
+  <textarea id="voiceText" rows="4" cols="50" placeholder="Type your message here..."></textarea><br>
+  <button onclick="sendVoice()">Send Message</button>
+
+  <h2>Emergency Alert</h2>
+  <div id="emergencyBox" style="color:red;font-weight:bold;"></div>
+
+  <script>
+    // Firebase config (use your real values)
+    var firebaseConfig = {
+      apiKey: "AIzaSyCiBewL3q6fMOyQY--TacGbDkte41bOLG0",
+      authDomain: "blindguidesystem.firebaseapp.com",
+      databaseURL: "https://blindguidesystem-default-rtdb.firebaseio.com",
+      projectId: "blindguidesystem",
+      storageBucket: "blindguidesystem.appspot.com",
+      messagingSenderId: "591764650022",
+      appId: "1:591764650022:web:bc5e808a7033b8e88f4ee7"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Leaflet Map
+    let map = L.map('map').setView([20.5937, 78.9629], 5); // Default: India
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18
+    }).addTo(map);
+
+    let marker = null;
+
+    db.ref("location").on("value", (snapshot) => {
+      const loc = snapshot.val();
+      if (loc && loc.lat && loc.lon) {
+        const newPos = [loc.lat, loc.lon];
+        if (!marker) {
+          marker = L.marker(newPos).addTo(map);
+        } else {
+          marker.setLatLng(newPos);
+        }
+        map.setView(newPos, 16);
+      }
+    });
+
+    function sendVoice() {
+      const message = document.getElementById("voiceText").value;
+      if (message.trim() !== "") {
+        db.ref("voice").set(message);
+        alert("✅ Message sent.");
+        document.getElementById("voiceText").value = "";
+      }
+    }
+
+    db.ref("emergency").on("value", (snapshot) => {
+      const alert = snapshot.val();
+      if (alert) {
+        document.getElementById("emergencyBox").innerText = "🚨 " + alert.alert;
+        db.ref("emergency").remove();
+      }
+    });
+  </script>
+</body>
+</html>
